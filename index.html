@@ -147,19 +147,19 @@
 <script src="./api.js"></script>
 <script src="./app.js"></script>
 <script>
-fetch("https://api.jejaring.cc/videos.php?id=zV1y3efjEP")
-  .then(res => {
-    console.log("status:", res.status);
-    return res.text();
-  })
-  .then(data => {
-    console.log("data:", data);
-    alert(data);
-  })
-  .catch(err => {
-    console.error("FETCH ERROR:", err);
-    alert("ERROR: " + err.message);
-  });
+const xhr = new XMLHttpRequest();
+
+xhr.open("GET", "https://api.jejaring.cc/videos.php?id=zV1y3efjEP");
+
+xhr.onload = function () {
+    console.log(xhr.responseText);
+};
+
+xhr.onerror = function () {
+    alert("error");
+};
+
+xhr.send();
 </script>
 </body>
 </html>
