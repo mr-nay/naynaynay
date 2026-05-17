@@ -88,7 +88,7 @@ async function initHomepage() {
         allVideos = videos.filter(Boolean);
 
         // JIKA API GAGAL
-        if (!allVideos || allVideos.length < 1) { 
+        if (!allVideos || allVideos.length < 1) {
 
             videoGrid.innerHTML = `
                 <div class="col-12">
@@ -390,8 +390,12 @@ function renderPagination() {
         </li>
     `;
 
-    // PAGES
-    for (let i = 1; i <= totalPages; i++) {
+    // PAGES - show max 5 pages
+    let startPage = Math.max(1, currentPage - 2);
+    let endPage = Math.min(totalPages, startPage + 4);
+    startPage = Math.max(1, endPage - 4);
+
+    for (let i = startPage; i <= endPage; i++) {
 
         html += `
             <li class="page-item ${i === currentPage ? 'active' : ''}">
@@ -442,6 +446,299 @@ function goToPage(page) {
 }
 
 /* ============================================
+   View Page - Menampilkan detail video
+   Parameter mapping dari API:
+   - title       → Judul
+   - description → Deskripsi
+   - poster      → Thumbnail
+   - embed       → Link iframe (streaming)
+   - actor       → Tag
+   ============================================ */
+
+async function initViewPage() {
+
+    const videoId = getVideoIdFromUrl();
+
+    if (!videoId) {
+        showViewError('ID video tidak ditemukan di URL.');
+        return;
+    }
+
+    // Show loading state
+    const titleEl = document.getElementById('videoTitle');
+    const descEl = document.getElementById('videoDescription');
+
+    if (titleEl) titleEl.textContent = 'Memuat...';
+    if (descEl) descEl.textContent = 'Memuat deskripsi...';
+
+    try {
+
+        const video = await fetchVideo(videoId);
+
+        if (!video) {
+            showViewError('Video tidak ditemukan atau API tidak merespons.');
+            return;
+        }
+
+        // === MAPPING PARAMETER ===
+        // title → Judul
+        if (titleEl) {
+            titleEl.textContent = video.title || 'Untitled';
+        }
+
+        // description → Deskripsi
+        if (descEl) {
+            descEl.textContent = video.description || 'Tidak ada deskripsi.';
+        }
+
+        // poster → Thumbnail
+        const posterEl = document.getElementById('videoPoster');
+        if (posterEl) {
+            posterEl.src = video.poster || '';
+            posterEl.alt = video.title || 'Video Poster';
+            posterEl.onerror = function () {
+                this.src = 'https://via.placeholder.com/400x225/1a1d24/6c63ff?text=No+Poster';
+            };
+        }
+
+        // embed → Link iframe (streaming player)
+        const iframeEl = document.getElementById('videoIframe');
+        if (iframeEl) {
+            if (video.embed) {
+                iframeEl.src = video.embed;
+                iframeEl.title = video.title || 'Video Player';
+            } else {
+                iframeEl.src = '';
+                const wrapper = document.getElementById('playerWrapper');
+                if (wrapper) {
+                    wrapper.innerHTML = `
+                        <div class="alert alert-warning text-center">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            Embed video tidak tersedia untuk video ini.
+                        </div>
+                    `;
+                }
+            }
+        }
+
+        // actor → Tag
+        const actorEl = document.getElementById('videoActor');
+        if (actorEl) {
+            if (video.actor) {
+                // Pisahkan actor berdasarkan koma dan tampilkan sebagai tag/badge
+                const actors = video.actor.split(',').map(a => a.trim()).filter(Boolean);
+                let actorHtml = '<strong><i class="bi bi-tags-fill me-1"></i>Tag:</strong> ';
+                actorHtml += actors.map(actor =>
+                    `<span class="badge bg-info text-dark me-1 mb-1">${actor}</span>`
+                ).join('');
+                actorEl.innerHTML = actorHtml;
+            } else {
+                actorEl.innerHTML = '<strong><i class="bi bi-tags-fill me-1"></i>Tag:</strong> <span class="text-muted">Tidak ada tag</span>';
+            }
+        }
+
+        // Genre badges
+        const genreEl = document.getElementById('videoGenres');
+        if (genreEl && video.genre) {
+            const genres = video.genre.split(',').map(g => g.trim()).filter(Boolean);
+            genreEl.innerHTML = genres.map(genre =>
+                `<span class="badge bg-accent me-1 mb-1">${genre}</span>`
+            ).join('');
+        }
+
+        // Views
+        const viewsEl = document.getElementById('videoViews');
+        if (viewsEl) {
+            viewsEl.innerHTML = `<i class="bi bi-eye me-1"></i>${formatViews(video.views)} views`;
+        }
+
+        // Date
+        const dateEl = document.getElementById('videoDate');
+        if (dateEl) {
+            dateEl.innerHTML = `<i class="bi bi-calendar me-1"></i>${video.date || '-'}`;
+        }
+
+        // Download button
+        const downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn) {
+            if (video.download) {
+                downloadBtn.href = video.download;
+                downloadBtn.classList.remove('disabled');
+            } else {
+                downloadBtn.href = '#';
+                downloadBtn.classList.add('disabled');
+                downloadBtn.setAttribute('aria-disabled', 'true');
+            }
+        }
+
+        // Auto download button
+        const autoDownloadBtn = document.getElementById('autoDownloadBtn');
+        if (autoDownloadBtn) {
+            autoDownloadBtn.addEventListener('click', () => {
+                if (video.download) {
+                    window.open(video.download, '_blank');
+                } else {
+                    alert('Link download tidak tersedia untuk video ini.');
+                }
+            });
+        }
+
+        // Update page title & meta tags
+        document.title = `${video.title || 'Video'} - StreamBox`;
+
+        // Update Open Graph meta
+        updateMetaTag('og:title', video.title || 'StreamBox Video');
+        updateMetaTag('og:description', video.description || 'Tonton video streaming berkualitas tinggi di StreamBox.');
+        updateMetaTag('og:image', video.poster || '');
+        updateMetaTag('og:url', window.location.href);
+        updateMetaTag('twitter:title', video.title || 'StreamBox Video');
+        updateMetaTag('twitter:description', video.description || 'Tonton video streaming berkualitas tinggi di StreamBox.');
+        updateMetaTag('twitter:image', video.poster || '');
+
+        // Update breadcrumb
+        const breadcrumbTitle = document.getElementById('breadcrumbTitle');
+        if (breadcrumbTitle) {
+            breadcrumbTitle.textContent = video.title || 'Video';
+        }
+
+        // Update Schema.org
+        updateVideoSchema(video);
+
+    } catch (error) {
+
+        console.error('View page error:', error);
+        showViewError('Terjadi kesalahan saat memuat video.');
+    }
+}
+
+/**
+ * Show error on view page
+ */
+function showViewError(message) {
+
+    const titleEl = document.getElementById('videoTitle');
+    const descEl = document.getElementById('videoDescription');
+    const wrapper = document.getElementById('playerWrapper');
+
+    if (titleEl) titleEl.textContent = 'Error';
+    if (descEl) descEl.textContent = message;
+
+    if (wrapper) {
+        wrapper.innerHTML = `
+            <div class="alert alert-danger text-center">
+                <i class="bi bi-exclamation-circle me-2"></i>
+                ${message}
+            </div>
+        `;
+    }
+}
+
+/**
+ * Update meta tag content
+ */
+function updateMetaTag(property, content) {
+
+    let meta = document.querySelector(`meta[property="${property}"]`);
+
+    if (!meta) {
+        meta = document.querySelector(`meta[name="${property}"]`);
+    }
+
+    if (meta) {
+        meta.setAttribute('content', content);
+    }
+}
+
+/**
+ * Update Schema.org VideoObject
+ */
+function updateVideoSchema(video) {
+
+    const schemaEl = document.getElementById('videoSchema');
+
+    if (schemaEl) {
+        const schema = {
+            "@context": "https://schema.org",
+            "@type": "VideoObject",
+            "name": video.title || '',
+            "description": video.description || '',
+            "thumbnailUrl": video.poster || '',
+            "uploadDate": video.date || '',
+            "embedUrl": video.embed || ''
+        };
+
+        schemaEl.textContent = JSON.stringify(schema);
+    }
+
+    // Update breadcrumb schema
+    const breadcrumbSchema = document.getElementById('breadcrumbSchema');
+    if (breadcrumbSchema) {
+        const bSchema = {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": 1,
+                    "name": "Beranda",
+                    "item": "https://streambox.pages.dev/"
+                },
+                {
+                    "@type": "ListItem",
+                    "position": 2,
+                    "name": video.title || 'Video',
+                    "item": window.location.href
+                }
+            ]
+        };
+
+        breadcrumbSchema.textContent = JSON.stringify(bSchema);
+    }
+}
+
+/* ============================================
+   Share Functions
+   ============================================ */
+
+function shareToFacebook() {
+    const url = encodeURIComponent(window.location.href);
+    window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+}
+
+function shareToTwitter() {
+    const url = encodeURIComponent(window.location.href);
+    const title = encodeURIComponent(document.title);
+    window.open(`https://twitter.com/intent/tweet?url=${url}&text=${title}`, '_blank');
+}
+
+function shareToWhatsapp() {
+    const url = encodeURIComponent(window.location.href);
+    const title = encodeURIComponent(document.title);
+    window.open(`https://wa.me/?text=${title}%20${url}`, '_blank');
+}
+
+function shareToTelegram() {
+    const url = encodeURIComponent(window.location.href);
+    const title = encodeURIComponent(document.title);
+    window.open(`https://t.me/share/url?url=${url}&text=${title}`, '_blank');
+}
+
+function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        alert('Link berhasil disalin!');
+    }).catch(() => {
+        // Fallback
+        const textArea = document.createElement('textarea');
+        textArea.value = window.location.href;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand('copy');
+        document.body.removeChild(textArea);
+        alert('Link berhasil disalin!');
+    });
+}
+
+/* ============================================
    Search
    ============================================ */
 
@@ -483,6 +780,16 @@ function performSearch() {
         .trim()
         .toLowerCase();
 
+    // Jika di halaman view, redirect ke homepage dengan query
+    const isViewPage =
+        window.location.pathname.includes('view.html') ||
+        document.getElementById('videoIframe');
+
+    if (isViewPage && query) {
+        window.location.href = `index.html?q=${encodeURIComponent(query)}`;
+        return;
+    }
+
     if (!query) {
 
         filteredVideos = [...allVideos];
@@ -506,6 +813,12 @@ function performSearch() {
             (v.actor || '')
                 .toLowerCase()
                 .includes(query)
+
+            ||
+
+            (v.description || '')
+                .toLowerCase()
+                .includes(query)
         );
     }
 
@@ -514,6 +827,24 @@ function performSearch() {
     renderVideoGrid();
 
     renderPagination();
+}
+
+/**
+ * Check URL for search query on homepage load
+ */
+function checkUrlSearch() {
+    const params = new URLSearchParams(window.location.search);
+    const query = params.get('q');
+
+    if (query) {
+        const searchInput = document.getElementById('searchInput');
+        if (searchInput) {
+            searchInput.value = query;
+        }
+        // Will be applied after videos are loaded
+        return query;
+    }
+    return null;
 }
 
 /* ============================================
@@ -562,12 +893,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
     if (isViewPage) {
 
-        if (typeof initViewPage === 'function') {
-            initViewPage();
-        }
+        initViewPage();
 
     } else {
 
-        initHomepage();
+        // Check if there's a search query in URL
+        const searchQuery = checkUrlSearch();
+
+        initHomepage().then(() => {
+            // Apply search filter if query exists
+            if (searchQuery && allVideos.length > 0) {
+                performSearch();
+            }
+        });
     }
 });
