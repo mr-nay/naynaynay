@@ -38,6 +38,13 @@ const VIDEO_IDS = [
 
 /**
  * Fetch single video data from API
+ * Parameter mapping:
+ * - title    → Judul video
+ * - description → Deskripsi video
+ * - poster   → Thumbnail / gambar poster
+ * - embed    → Link iframe untuk streaming
+ * - actor    → Tag / aktor
+ *
  * @param {string} videoId
  * @returns {Promise<Object|null>}
  */
@@ -63,14 +70,10 @@ async function fetchVideo(videoId) {
         // PARSE JSON
         const data = await response.json();
 
-        console.log('API RESPONSE:', data);
+        console.log('API RESPONSE for', videoId, ':', data);
 
-        // VALIDASI
-        if (
-            data &&
-            data.status === 'success' &&
-            data.video
-        ) {
+        // VALIDASI - cek berbagai format response
+        if (data && data.status === 'success' && data.video) {
 
             const video = data.video;
 
@@ -88,6 +91,24 @@ async function fetchVideo(videoId) {
                 download: video.download || '',
                 views: Number(video.views) || 0,
                 date: video.date || ''
+            };
+        }
+
+        // Coba format alternatif jika response langsung tanpa wrapper
+        if (data && data.title) {
+            return {
+                code: data.code || videoId,
+                title: data.title || 'Untitled',
+                slug: data.slug || '',
+                description: data.description || '',
+                actor: data.actor || '',
+                genre: data.genre || '',
+                poster: data.poster || '',
+                embed: data.embed || '',
+                videos: data.videos || '',
+                download: data.download || '',
+                views: Number(data.views) || 0,
+                date: data.date || ''
             };
         }
 
@@ -119,6 +140,7 @@ async function fetchMultipleVideos(ids = VIDEO_IDS) {
         .map(r => r.status === 'fulfilled' ? r.value : null)
         .filter(v => v !== null);
 }
+
 /**
  * Get all video IDs
  * @returns {string[]}
@@ -141,26 +163,4 @@ function getVideoIdFromUrl() {
         params.get('code') ||
         null
     );
-}
-
-/**
- * Optional fallback demo object
- * Tidak dipakai kecuali manual
- */
-function generateDemoVideo(id) {
-
-    return {
-        code: id,
-        title: 'Video',
-        slug: '',
-        description: '',
-        actor: '',
-        genre: '',
-        poster: `https://poster.imgvid.com/${id}.jpg`,
-        embed: `https://gdplayer.ornop.org/e/${id}`,
-        videos: `https://gdplayer.ornop.org/e/${id}`,
-        download: '',
-        views: 0,
-        date: ''
-    };
 }
