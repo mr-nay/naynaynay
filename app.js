@@ -1,5 +1,6 @@
 /* ============================================
-   app.js
+   StreamBox - Main Application Module
+   Handles routing, pagination, theme, UI
    ============================================ */
 
 // Configuration
@@ -11,7 +12,7 @@ let allVideos = [];
 let filteredVideos = [];
 
 /* ============================================
-   THEME
+   Theme Management
    ============================================ */
 
 function initTheme() {
@@ -64,7 +65,7 @@ function updateThemeIcon(theme) {
 }
 
 /* ============================================
-   HOMEPAGE
+   Homepage
    ============================================ */
 
 async function initHomepage() {
@@ -76,35 +77,56 @@ async function initHomepage() {
 
     showLoadingGrid(videoGrid);
 
-    const ids = getVideoIds();
+    try {
 
-    const videos =
-        await fetchMultipleVideos(ids);
+        const ids = getVideoIds();
 
-    // PAKAI DATA ASLI API
-    allVideos = videos.filter(Boolean);
+        const videos =
+            await fetchMultipleVideos(ids);
 
-    // JIKA API GAGAL
-    if (allVideos.length === 0) {
+        // HANYA DATA VALID
+        allVideos = videos.filter(Boolean);
+
+        // JIKA API GAGAL
+        if (allVideos.length === 0) {
+
+            videoGrid.innerHTML = `
+                <div class="col-12">
+                    <div class="alert alert-danger">
+                        Gagal memuat video dari API
+                    </div>
+                </div>
+            `;
+
+            return;
+        }
+
+        filteredVideos = [...allVideos];
+
+        // PINNED POST
+        if (allVideos[0]) {
+            renderPinnedPost(allVideos[0]);
+        }
+
+        renderVideoGrid();
+
+        renderPagination();
+
+    } catch (error) {
+
+        console.error(
+            'Homepage error:',
+            error
+        );
 
         videoGrid.innerHTML = `
             <div class="col-12">
                 <div class="alert alert-danger">
-                    Gagal memuat video dari API.
+                    Terjadi kesalahan saat memuat data
                 </div>
             </div>
         `;
-
-        return;
     }
-
-    filteredVideos = [...allVideos];
-
-    renderPinnedPost(allVideos[0]);
-
-    renderVideoGrid();
-
-    renderPagination();
 }
 
 /**
@@ -119,11 +141,13 @@ function showLoadingGrid(container) {
         html += `
             <div class="col-6 col-md-4 col-lg-3">
                 <div class="video-card">
+
                     <div class="skeleton"
                         style="aspect-ratio:16/9;">
                     </div>
 
                     <div class="card-body">
+
                         <div class="skeleton"
                             style="height:16px;margin-bottom:8px;">
                         </div>
@@ -131,6 +155,7 @@ function showLoadingGrid(container) {
                         <div class="skeleton"
                             style="height:12px;width:60%;">
                         </div>
+
                     </div>
                 </div>
             </div>
@@ -176,7 +201,9 @@ function renderPinnedPost(video) {
                                     class="w-100 h-100"
                                     style="object-fit:cover;"
                                     loading="lazy"
+                                    onerror="this.src='https://via.placeholder.com/640x360/1a1d24/6c63ff?text=StreamBox'"
                                 >
+
                             </div>
                         </div>
 
@@ -187,7 +214,7 @@ function renderPinnedPost(video) {
                                 <h3 class="fw-bold mb-2"
                                     style="color:var(--text-primary);">
 
-                                    ${video.title}
+                                    ${video.title || 'Untitled'}
 
                                 </h3>
 
@@ -197,6 +224,24 @@ function renderPinnedPost(video) {
                                     ${video.description || ''}
 
                                 </p>
+
+                                <div class="d-flex gap-2 flex-wrap">
+
+                                    <span class="badge bg-accent">
+
+                                        <i class="bi bi-eye me-1"></i>
+
+                                        ${formatViews(video.views)}
+
+                                    </span>
+
+                                    <span class="badge bg-secondary">
+
+                                        ${video.date || '-'}
+
+                                    </span>
+
+                                </div>
 
                             </div>
                         </div>
@@ -208,7 +253,7 @@ function renderPinnedPost(video) {
 }
 
 /**
- * Render grid
+ * Render video grid
  */
 function renderVideoGrid() {
 
@@ -230,6 +275,7 @@ function renderVideoGrid() {
 
     pageVideos.forEach((video, index) => {
 
+        // INLINE ADS
         if (
             index > 0 &&
             index % AD_INTERVAL === 0
@@ -237,10 +283,13 @@ function renderVideoGrid() {
 
             html += `
                 <div class="col-12 ad-slot-inline">
+
                     <div class="ad-banner text-center">
+
                         <div class="ad-placeholder">
                             <span>Advertisement</span>
                         </div>
+
                     </div>
                 </div>
             `;
@@ -260,17 +309,22 @@ function renderVideoGrid() {
                                 src="${video.poster}"
                                 alt="${video.title}"
                                 loading="lazy"
+
+                                onerror="
+                                    this.src='https://via.placeholder.com/320x180/1a1d24/6c63ff?text=StreamBox'
+                                "
                             >
 
                             <div class="play-overlay">
                                 <i class="bi bi-play-circle-fill"></i>
                             </div>
+
                         </div>
 
                         <div class="card-body">
 
                             <h3 class="card-title">
-                                ${video.title}
+                                ${video.title || 'Untitled'}
                             </h3>
 
                             <div class="card-meta">
@@ -279,7 +333,12 @@ function renderVideoGrid() {
 
                                 ${formatViews(video.views)}
 
+                                •
+
+                                ${video.date || '-'}
+
                             </div>
+
                         </div>
                     </div>
                 </a>
@@ -320,6 +379,18 @@ function renderPagination() {
 
     let html = '';
 
+    // PREV
+    html += `
+        <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+            <a class="page-link"
+               href="#"
+               onclick="goToPage(${currentPage - 1});return false;">
+                ←
+            </a>
+        </li>
+    `;
+
+    // PAGES
     for (let i = 1; i <= totalPages; i++) {
 
         html += `
@@ -333,13 +404,35 @@ function renderPagination() {
         `;
     }
 
+    // NEXT
+    html += `
+        <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+            <a class="page-link"
+               href="#"
+               onclick="goToPage(${currentPage + 1});return false;">
+                →
+            </a>
+        </li>
+    `;
+
     container.innerHTML = html;
 }
 
 /**
- * Go page
+ * Go to page
  */
 function goToPage(page) {
+
+    const totalPages =
+        Math.ceil(
+            filteredVideos.length /
+            POSTS_PER_PAGE
+        );
+
+    if (
+        page < 1 ||
+        page > totalPages
+    ) return;
 
     currentPage = page;
 
@@ -348,9 +441,10 @@ function goToPage(page) {
     renderPagination();
 }
 
-/**
- * Search
- */
+/* ============================================
+   Search
+   ============================================ */
+
 function initSearch() {
 
     const searchInput =
@@ -359,7 +453,10 @@ function initSearch() {
     const searchBtn =
         document.getElementById('searchBtn');
 
-    if (searchInput && searchBtn) {
+    if (
+        searchInput &&
+        searchBtn
+    ) {
 
         searchBtn.addEventListener(
             'click',
@@ -419,9 +516,10 @@ function performSearch() {
     renderPagination();
 }
 
-/**
- * Format views
- */
+/* ============================================
+   Utilities
+   ============================================ */
+
 function formatViews(views) {
 
     if (!views) return '0';
@@ -438,7 +536,7 @@ function formatViews(views) {
 }
 
 /* ============================================
-   INIT
+   Initialization
    ============================================ */
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -449,6 +547,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('themeToggle');
 
     if (themeToggle) {
+
         themeToggle.addEventListener(
             'click',
             toggleTheme
@@ -462,8 +561,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('videoIframe');
 
     if (isViewPage) {
-        initViewPage();
+
+        if (typeof initViewPage === 'function') {
+            initViewPage();
+        }
+
     } else {
+
         initHomepage();
     }
 });
