@@ -1,9 +1,12 @@
 /* ============================================
-   api.js
+   StreamBox - API Module
+   Handles all fetch requests to external API
    ============================================ */
 
+// API Configuration
 const API_BASE_URL = 'https://api.jejaring.cc/videos.php';
 
+// Video IDs
 const VIDEO_IDS = [
   '690a489gl4',
   'MJ21yWAPAu',
@@ -34,7 +37,9 @@ const VIDEO_IDS = [
 ];
 
 /**
- * Fetch single video
+ * Fetch single video data from API
+ * @param {string} videoId
+ * @returns {Promise<Object|null>}
  */
 async function fetchVideo(videoId) {
 
@@ -50,12 +55,17 @@ async function fetchVideo(videoId) {
             }
         );
 
+        // HTTP ERROR
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
         }
 
+        // PARSE JSON
         const data = await response.json();
 
+        console.log('API RESPONSE:', data);
+
+        // VALIDASI
         if (
             data &&
             data.status === 'success' &&
@@ -64,6 +74,7 @@ async function fetchVideo(videoId) {
 
             const video = data.video;
 
+            // RETURN FORMAT STABIL
             return {
                 code: video.code || videoId,
                 title: video.title || 'Untitled',
@@ -85,7 +96,7 @@ async function fetchVideo(videoId) {
     } catch (error) {
 
         console.warn(
-            `Fetch error ${videoId}:`,
+            `Failed to fetch video ${videoId}:`,
             error.message
         );
 
@@ -95,33 +106,72 @@ async function fetchVideo(videoId) {
 
 /**
  * Fetch multiple videos
+ * @param {string[]} ids
+ * @returns {Promise<Object[]>}
  */
 async function fetchMultipleVideos(ids = VIDEO_IDS) {
 
-    const promises = ids.map(id => fetchVideo(id));
+    try {
 
-    const results = await Promise.all(promises);
+        const promises = ids.map(id => fetchVideo(id));
 
-    return results.filter(Boolean);
+        const results = await Promise.all(promises);
+
+        return results.filter(Boolean);
+
+    } catch (error) {
+
+        console.error(
+            'Failed fetching multiple videos:',
+            error
+        );
+
+        return [];
+    }
 }
 
 /**
  * Get all video IDs
+ * @returns {string[]}
  */
 function getVideoIds() {
     return VIDEO_IDS;
 }
 
 /**
- * Get video ID from URL
+ * Get video ID from URL parameters
+ * @returns {string|null}
  */
 function getVideoIdFromUrl() {
 
-    const params = new URLSearchParams(window.location.search);
+    const params =
+        new URLSearchParams(window.location.search);
 
     return (
         params.get('id') ||
         params.get('code') ||
         null
     );
+}
+
+/**
+ * Optional fallback demo object
+ * Tidak dipakai kecuali manual
+ */
+function generateDemoVideo(id) {
+
+    return {
+        code: id,
+        title: 'Video',
+        slug: '',
+        description: '',
+        actor: '',
+        genre: '',
+        poster: `https://poster.imgvid.com/${id}.jpg`,
+        embed: `https://gdplayer.ornop.org/e/${id}`,
+        videos: `https://gdplayer.ornop.org/e/${id}`,
+        download: '',
+        views: 0,
+        date: ''
+    };
 }
