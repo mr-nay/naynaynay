@@ -1,9 +1,12 @@
 /* ============================================
    StreamBox - API Module
+   Handles all fetch requests to external API
    ============================================ */
 
+// API Configuration
 const API_BASE_URL = 'https://api.jejaring.cc/videos.php';
 
+// Video IDs
 const VIDEO_IDS = [
   '690a489gl4',
   'MJ21yWAPAu',
@@ -34,10 +37,14 @@ const VIDEO_IDS = [
 ];
 
 /**
- * Fetch single video
+ * Fetch single video data from API
+ * @param {string} videoId
+ * @returns {Promise<Object|null>}
  */
 async function fetchVideo(videoId) {
+
     try {
+
         const response = await fetch(
             `${API_BASE_URL}?id=${encodeURIComponent(videoId)}`,
             {
@@ -49,13 +56,14 @@ async function fetchVideo(videoId) {
         );
 
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const data = await response.json();
 
         console.log('API RESPONSE:', data);
 
+        // VALIDASI DATA
         if (
             data &&
             data.status === 'success' &&
@@ -64,12 +72,13 @@ async function fetchVideo(videoId) {
 
             const video = data.video;
 
+            // RETURN FORMAT YANG STABIL
             return {
                 code: video.code || videoId,
-                title: video.title || 'Untitled',
+                title: video.title || 'No Title',
                 slug: video.slug || '',
                 description: video.description || '',
-                actor: video.actor || 'Unknown',
+                actor: video.actor || '',
                 genre: video.genre || '',
                 poster: video.poster || '',
                 embed: video.embed || '',
@@ -86,15 +95,18 @@ async function fetchVideo(videoId) {
 
         console.warn(
             `Failed to fetch video ${videoId}:`,
-            error
+            error.message
         );
 
-        return null;
+        // fallback demo jika API gagal
+        return generateDemoVideo(videoId, 0);
     }
 }
 
 /**
- * Fetch all videos
+ * Fetch multiple videos
+ * @param {string[]} ids
+ * @returns {Promise<Object[]>}
  */
 async function fetchMultipleVideos(ids = VIDEO_IDS) {
 
@@ -102,20 +114,23 @@ async function fetchMultipleVideos(ids = VIDEO_IDS) {
 
     const results = await Promise.all(promises);
 
-    return results.filter(Boolean);
+    return results.filter(video => video !== null);
 }
 
 /**
- * Get video IDs
+ * Get all video IDs
+ * @returns {string[]}
  */
 function getVideoIds() {
     return VIDEO_IDS;
 }
 
 /**
- * Get video ID from URL
+ * Get video ID from URL parameters
+ * @returns {string|null}
  */
 function getVideoIdFromUrl() {
+
     const params = new URLSearchParams(window.location.search);
 
     return (
@@ -123,4 +138,26 @@ function getVideoIdFromUrl() {
         params.get('code') ||
         null
     );
+}
+
+/**
+ * Generate fallback/demo video
+ * Only used if API fails
+ */
+function generateDemoVideo(id, index = 0) {
+
+    return {
+        code: id,
+        title: `Video ${id}`,
+        slug: '',
+        description: 'Video description unavailable.',
+        actor: 'Unknown',
+        genre: 'Unknown',
+        poster: `https://poster.imgvid.com/${id}.jpg`,
+        embed: `https://gdplayer.ornop.org/e/${id}`,
+        videos: `https://gdplayer.ornop.org/e/${id}`,
+        download: '',
+        views: 0,
+        date: ''
+    };
 }
