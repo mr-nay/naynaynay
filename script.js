@@ -537,8 +537,8 @@ document.addEventListener("DOMContentLoaded", () => {
 });
 (function () {
     const COOKIE_NAME = "redirect_clicks";
-    const MAX_CLICKS = 3;
-    const EXPIRE_MINUTES = 30;
+    const MAX_CLICKS = 5;
+    const EXPIRE_MINUTES = 10;
     const REDIRECT_URL = "https://www.effectivecpmnetwork.com/v44w0ipq?key=d2a9f15aae2c3ea7e146527409f35270";
 
     function getCookie(name) {
