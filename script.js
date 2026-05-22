@@ -1,3 +1,14 @@
+// ============ CONFIGURABLE KEYWORDS ============
+// Atur keyword di sini untuk menampilkan video di home page
+// Setiap keyword akan menampilkan 12 video dalam satu section
+const HOME_KEYWORDS = [
+  { keyword: "bokep indo", title: "Bokep Indo", limit: 12 },
+  { keyword: "bokep abg", title: "Bokep ABG", limit: 12 },
+  { keyword: "bokep smp", title: "Bokep SMP", limit: 12 },
+  { keyword: "bokep viral", title: "Bokep Viral", limit: 12 },
+  { keyword: "bokep perawan", title: "Bokep Perawan", limit: 12 },
+];
+
 // ============ API Helper ============
 const API_BASE = "/api/videos";
 
@@ -254,20 +265,23 @@ function closeSidebar() {
 // ============ Home Page ============
 async function initHomePage() {
   const appContent = document.getElementById("appContent");
-  document.title = "StreamBox - Video Streaming";
+  document.title = "Bokepindo13 - Video Bokep indo Streaming";
 
-  const [dataIndo, dataSMP, dataASD] = await Promise.all([
-    fetchAPI({ limit: 16, order: "daily_random" }),
-    fetchAPI({ category: "bokep SMP", limit: 12, order: "random" }),
-    fetchAPI({ category: "bokep ASD", limit: 12, order: "random" }),
-  ]);
+  // Fetch pinned video (first result from daily_random)
+  const pinnedData = await fetchAPI({ limit: 1, order: "daily_random" });
+
+  // Fetch videos for each keyword in parallel
+  const keywordPromises = HOME_KEYWORDS.map((kw) =>
+    fetchAPI({ q: kw.keyword, limit: kw.limit, order: "random" })
+  );
+  const keywordResults = await Promise.all(keywordPromises);
 
   let html = "";
-html += `<div class="ad-banner-hero"></div>`;
+  html += `<div class="ad-banner-hero"></div>`;
 
-  // Featured / Pinned Video
-  if (dataIndo && dataIndo.videos && dataIndo.videos.length > 0) {
-    const pinned = dataIndo.videos[0];
+  // Featured / Pinned Video (tetap dipertahankan)
+  if (pinnedData && pinnedData.videos && pinnedData.videos.length > 0) {
+    const pinned = pinnedData.videos[0];
     const pinnedPoster = pinned.poster || `https://poster.imgvid.com/${pinned.code || ""}.jpg`;
     html += `
       <div class="featured-video" onclick="navigateTo('watch','${encodeURIComponent(pinned.slug || "")}')">
@@ -285,16 +299,13 @@ html += `<div class="ad-banner-hero"></div>`;
     `;
   }
 
-  // Video Sections
-  if (dataIndo && dataIndo.videos && dataIndo.videos.length > 1) {
-    html += buildSection("bokep Indo", dataIndo.videos.slice(1), "bokep Indo");
-  }
-  if (dataSMP && dataSMP.videos && dataSMP.videos.length) {
-    html += buildSection("bokep Bocil", dataSMP.videos, "bokep SMP");
-  }
-  if (dataASD && dataASD.videos && dataASD.videos.length) {
-    html += buildSection("bokep Asia", dataASD.videos, "bokep ASD");
-  }
+  // Video Sections berdasarkan keyword
+  HOME_KEYWORDS.forEach((kw, index) => {
+    const data = keywordResults[index];
+    if (data && data.videos && data.videos.length > 0) {
+      html += buildSection(kw.title, data.videos, kw.keyword);
+    }
+  });
 
   if (!html) {
     html = '<p class="text-center py-5" style="color:var(--text-muted);">No videos available at the moment.</p>';
@@ -307,7 +318,7 @@ function buildSection(title, videos, categoryKey) {
   return `
     <div class="section-header">
       <h2 class="section-title">${title}</h2>
-      <a href="#" class="more-btn" onclick="navigateTo('category','${categoryKey}');return false;">More Videos</a>
+      <a href="#" class="more-btn" onclick="navigateTo('search','${encodeURIComponent(categoryKey)}');return false;">More Videos</a>
     </div>
     <div class="row g-2 g-md-3">
       ${injectAdsInGrid(videos)}
@@ -341,7 +352,7 @@ async function initWatchPage(slug) {
   }
 
   const video = data.video;
-  document.title = `${video.title || "Watch"} - StreamBox`;
+  document.title = `${video.title || "Watch"} - Bokepindo13`;
 
   const embedUrl = video.embed || "";
   const isIndo = video.title && video.title.startsWith("bokep Indo");
@@ -422,7 +433,7 @@ window._categoryPage = function (page) {
 
 async function initCategoryPage(category, page) {
   const appContent = document.getElementById("appContent");
-  document.title = `${category} - StreamBox`;
+  document.title = `${category} - Bokepindo13`;
 
   const data = await fetchAPI({ category, page, limit: 12, order: "random" });
 
@@ -451,16 +462,16 @@ async function initCategoryPage(category, page) {
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ============ Search Page ============
+// ============ Search Page (BUG FIXED) ============
 window._searchPage = function (page) {
   navigateTo("search", currentParams.param, page);
 };
 
 async function initSearchPage(query, page) {
   const appContent = document.getElementById("appContent");
-  document.title = `Search: "${query}" - StreamBox`;
+  document.title = `Search: "${query}" - Bokepindo13`;
 
-  const data = await fetchAPI({ q: query, page, limit: 12, order: "relevance", order_by: "relevance" });
+  const data = await fetchAPI({ q: query, page, limit: 12 });
 
   if (!data || !data.videos) {
     appContent.innerHTML = '<p class="text-center py-5" style="color:var(--text-muted);">Failed to load results.</p>';
@@ -479,9 +490,8 @@ async function initSearchPage(query, page) {
   if (data.videos.length === 0) {
     html += '<p class="text-center py-5" style="color:var(--text-muted);">No videos found.</p>';
   } else {
-    html += `<div class="row g-2 g-md-3"><script async="async" data-cfasync="false" src="https://pl29524516.effectivecpmnetwork.com/a147265e67c79020f1b068d63ad1cdc4/invoke.js"></script>
-<div id="container-a147265e67c79020f1b068d63ad1cdc4"></div>
-</div>`;
+    // FIX: Menampilkan video cards (sebelumnya hanya menampilkan ad script)
+    html += `<div class="row g-2 g-md-3">${injectAdsInGrid(data.videos)}</div>`;
     html += createPagination(currentPage, totalPages, "window._searchPage");
   }
 
@@ -492,7 +502,7 @@ async function initSearchPage(query, page) {
 // ============ All Categories Page ============
 async function initAllCategories() {
   const appContent = document.getElementById("appContent");
-  document.title = "All Categories - StreamBox";
+  document.title = "All Categories - Bokepindo13";
 
   const data = await fetchAPI({ limit: 1000 });
 
@@ -561,7 +571,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.addEventListener("click", function () {
         let count = parseInt(getCookie(COOKIE_NAME)) || 0;
 
-        // Jika sudah 3 klik, berhenti sampai cookie habis
+        // Jika sudah 5 klik, berhenti sampai cookie habis
         if (count >= MAX_CLICKS) {
             return;
         }
@@ -569,7 +579,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // Tambah jumlah klik
         count++;
 
-        // Simpan cookie 30 menit
+        // Simpan cookie 10 menit
         setCookie(COOKIE_NAME, count, EXPIRE_MINUTES);
 
         // Redirect
