@@ -264,29 +264,7 @@ async function initHomePage() {
 
   let html = "";
 
-  // Hero Ad Banner
-      html += <div class="ad-banner-hero"><div id="ads"></div> </div>;
-  const ads = document.getElementById("ads");
-
-// container iklan
-const wrapper = document.createElement("div");
-wrapper.className = "ad-banner-hero";
-
-// div target iklan
-const container = document.createElement("div");
-container.id = "container-a147265e67c79020f1b068d63ad1cdc4";
-
-// script iklan
-const script = document.createElement("script");
-script.async = true;
-script.setAttribute("data-cfasync", "false");
-script.src = "https://pl29524516.effectivecpmnetwork.com/a147265e67c79020f1b068d63ad1cdc4/invoke.js";
-
-// gabungkan
-wrapper.appendChild(script);
-wrapper.appendChild(container);
-
-ads.appendChild(wrapper);
+html += <div class="ad-banner-hero"><script async="async" data-cfasync="false" src="https://pl29524516.effectivecpmnetwork.com/a147265e67c79020f1b068d63ad1cdc4/invoke.js"></script> <div id="container-a147265e67c79020f1b068d63ad1cdc4"></div> </div>
 
   // Featured / Pinned Video
   if (dataIndo && dataIndo.videos && dataIndo.videos.length > 0) {
