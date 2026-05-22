@@ -10,6 +10,9 @@ const HOME_KEYWORDS = [
   { keyword: "bokep perawan", title: "Bokep Perawan", limit: 12 },
 ];
 
+// Ad script URL
+const AD_SCRIPT_URL = "//alive-airport.com/b/XnVts.drGelJ0qYAWhc-/RetmG9ZuSZNUUlNkSPOTcc/wJNfjqkm1HNpjdU/tXNLzrAn2EOGT/UA2FOdQI";
+
 // Fungsi untuk mengacak array (Fisher-Yates shuffle)
 function shuffleArray(array) {
   const shuffled = [...array];
@@ -78,25 +81,41 @@ function createVideoCard(video) {
   `;
 }
 
+// ============ AD BANNER FIX ============
+// Menggunakan placeholder div, lalu load script secara programatis
 function createAdBanner(index) {
   return `
     <div class="col-12 mb-3">
       <div class="ad-banner">
-<script>
-(function(trzbr){
-var d = document,
-    s = d.createElement('script'),
-    l = d.scripts[d.scripts.length - 1];
-s.settings = trzbr || {};
-s.src = "\/\/alive-airport.com\/b\/XnVts.drGelJ0qYAWhc-\/RetmG9ZuSZNUUlNkSPOTcc\/wJNfjqkm1HNpjdU\/tXNLzrAn2EOGT\/UA2FOdQI";
-s.async = true;
-s.referrerPolicy = 'no-referrer-when-downgrade';
-l.parentNode.insertBefore(s, l);
-})({})
-</script>
+        <div class="ad-slot" data-ad-id="grid-${index}"></div>
       </div>
     </div>
   `;
+}
+
+function createHeroAdBanner() {
+  return `<div class="ad-banner-hero"><div class="ad-slot" data-ad-id="hero"></div></div>`;
+}
+
+function createSidebarAdBanner() {
+  return `<div class="ad-banner mb-3"><div class="ad-slot" data-ad-id="sidebar"></div></div>`;
+}
+
+// Fungsi untuk load ad scripts setelah innerHTML di-render
+function loadAdScripts() {
+  const adSlots = document.querySelectorAll('.ad-slot[data-ad-id]');
+  adSlots.forEach((slot) => {
+    // Hindari double load
+    if (slot.dataset.loaded === "true") return;
+    slot.dataset.loaded = "true";
+
+    const s = document.createElement('script');
+    s.settings = {};
+    s.src = AD_SCRIPT_URL;
+    s.async = true;
+    s.referrerPolicy = 'no-referrer-when-downgrade';
+    slot.appendChild(s);
+  });
 }
 
 function injectAdsInGrid(videos) {
@@ -299,18 +318,9 @@ async function initHomePage() {
   const keywordResults = await Promise.all(keywordPromises);
 
   let html = "";
-  html += `<div class="ad-banner-hero"><script>
-(function(trzbr){
-var d = document,
-    s = d.createElement('script'),
-    l = d.scripts[d.scripts.length - 1];
-s.settings = trzbr || {};
-s.src = "\/\/alive-airport.com\/b\/XnVts.drGelJ0qYAWhc-\/RetmG9ZuSZNUUlNkSPOTcc\/wJNfjqkm1HNpjdU\/tXNLzrAn2EOGT\/UA2FOdQI";
-s.async = true;
-s.referrerPolicy = 'no-referrer-when-downgrade';
-l.parentNode.insertBefore(s, l);
-})({})
-</script></div>`;
+
+  // Hero Ad Banner (menggunakan placeholder)
+  html += createHeroAdBanner();
 
   // Featured / Pinned Video (tetap dipertahankan)
   if (pinnedData && pinnedData.videos && pinnedData.videos.length > 0) {
@@ -347,6 +357,9 @@ l.parentNode.insertBefore(s, l);
   }
 
   appContent.innerHTML = html;
+
+  // Load ad scripts setelah innerHTML di-render
+  loadAdScripts();
 }
 
 function buildSection(title, videos, categoryKey) {
@@ -447,24 +460,15 @@ async function initWatchPage(slug) {
         </div>
       </div>
       <div class="col-12 col-lg-4 mt-3 mt-lg-0">
-        <div class="ad-banner mb-3">
-<script>
-(function(trzbr){
-var d = document,
-    s = d.createElement('script'),
-    l = d.scripts[d.scripts.length - 1];
-s.settings = trzbr || {};
-s.src = "\/\/alive-airport.com\/b\/XnVts.drGelJ0qYAWhc-\/RetmG9ZuSZNUUlNkSPOTcc\/wJNfjqkm1HNpjdU\/tXNLzrAn2EOGT\/UA2FOdQI";
-s.async = true;
-s.referrerPolicy = 'no-referrer-when-downgrade';
-l.parentNode.insertBefore(s, l);
-})({})
-</script>
+        ${createSidebarAdBanner()}
       </div>
     </div>
   `;
 
   appContent.innerHTML = html;
+
+  // Load ad scripts setelah innerHTML di-render
+  loadAdScripts();
 
   // Scroll to top
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -503,6 +507,10 @@ async function initCategoryPage(category, page) {
   }
 
   appContent.innerHTML = html;
+
+  // Load ad scripts setelah innerHTML di-render
+  loadAdScripts();
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
@@ -540,6 +548,10 @@ async function initSearchPage(query, page) {
   }
 
   appContent.innerHTML = html;
+
+  // Load ad scripts setelah innerHTML di-render
+  loadAdScripts();
+
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
