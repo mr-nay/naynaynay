@@ -258,8 +258,8 @@ async function initHomePage() {
 
   const [dataIndo, dataSMP, dataASD] = await Promise.all([
     fetchAPI({ limit: 16, order: "daily_random" }),
-    fetchAPI({ category: "sapi SMP", limit: 12, order: "random" }),
-    fetchAPI({ category: "sapi ASD", limit: 12, order: "random" }),
+    fetchAPI({ category: "bokep SMP", limit: 12, order: "random" }),
+    fetchAPI({ category: "bokep ASD", limit: 12, order: "random" }),
   ]);
 
   let html = "";
@@ -289,13 +289,13 @@ async function initHomePage() {
 
   // Video Sections
   if (dataIndo && dataIndo.videos && dataIndo.videos.length > 1) {
-    html += buildSection("Sapi Indo", dataIndo.videos.slice(1), "sapi Indo");
+    html += buildSection("bokep Indo", dataIndo.videos.slice(1), "bokep Indo");
   }
   if (dataSMP && dataSMP.videos && dataSMP.videos.length) {
-    html += buildSection("Sapi Bocil", dataSMP.videos, "sapi SMP");
+    html += buildSection("bokep Bocil", dataSMP.videos, "bokep SMP");
   }
   if (dataASD && dataASD.videos && dataASD.videos.length) {
-    html += buildSection("Sapi Asia", dataASD.videos, "sapi ASD");
+    html += buildSection("bokep Asia", dataASD.videos, "bokep ASD");
   }
 
   if (!html) {
@@ -346,7 +346,7 @@ async function initWatchPage(slug) {
   document.title = `${video.title || "Watch"} - StreamBox`;
 
   const embedUrl = video.embed || "";
-  const isIndo = video.title && video.title.startsWith("sapi Indo");
+  const isIndo = video.title && video.title.startsWith("bokep Indo");
 
   // Genre links
   let genreHTML = "";
