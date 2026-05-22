@@ -265,7 +265,9 @@ async function initHomePage() {
   let html = "";
 
   // Hero Ad Banner
-  html += `<div class="ad-banner-hero"><i class="fa-solid fa-rectangle-ad me-2"></i> Premium Banner Advertisement</div>`;
+  html += `<div class="ad-banner-hero"><script async="async" data-cfasync="false" src="https://pl29524516.effectivecpmnetwork.com/a147265e67c79020f1b068d63ad1cdc4/invoke.js"></script>
+<div id="container-a147265e67c79020f1b068d63ad1cdc4"></div>
+</div>`;
 
   // Featured / Pinned Video
   if (dataIndo && dataIndo.videos && dataIndo.videos.length > 0) {
