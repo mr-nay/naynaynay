@@ -36,72 +36,192 @@ function createVideoCard(video) {
   const date = formatDate(video.date);
 
   return `
-    <a href="/watch.html?v=${encodeURIComponent(slug)}" class="video-card">
-      <div class="thumb-wrap">
-        <img src="${poster}" alt="${title}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180/222/666?text=No+Image'">
-        <div class="thumb-overlay">
-          <i class="fa-solid fa-play"></i>
+    <div class="col-6 col-md-3 mb-3">
+      <a href="#" class="video-card" onclick="navigateTo('watch','${encodeURIComponent(slug)}');return false;">
+        <div class="thumb-wrap">
+          <img src="${poster}" alt="${title}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180/1a0a2e/8b5cf6?text=No+Image'">
+          <div class="thumb-overlay">
+            <i class="fa-solid fa-play"></i>
+          </div>
         </div>
-      </div>
-      <div class="video-meta">
-        <div class="video-title">${title}</div>
-        <div class="video-stats">
-          <i class="uil uil-eye"></i> ${views}
-          ${date ? `<span style="margin-left:8px"><i class="uil uil-calendar-alt"></i> ${date}</span>` : ""}
+        <div class="card-body">
+          <div class="video-title">${title}</div>
+          <div class="video-stats">
+            <i class="fa-solid fa-eye"></i> ${views}
+            ${date ? `<span class="ms-2"><i class="fa-regular fa-calendar"></i> ${date}</span>` : ""}
+          </div>
         </div>
-      </div>
-    </a>
+      </a>
+    </div>
   `;
 }
 
-function createPagination(currentPage, totalPages, baseUrl) {
+function createAdBanner(index) {
+  return `
+    <div class="col-12 mb-3">
+      <div class="ad-banner">
+        <i class="fa-solid fa-rectangle-ad me-2"></i> Advertisement Space ${index || ""}
+      </div>
+    </div>
+  `;
+}
+
+function injectAdsInGrid(videos) {
+  let html = "";
+  for (let i = 0; i < videos.length; i++) {
+    html += createVideoCard(videos[i]);
+    if ((i + 1) % 4 === 0 && i < videos.length - 1) {
+      html += createAdBanner(Math.floor((i + 1) / 4));
+    }
+  }
+  return html;
+}
+
+function createPagination(currentPage, totalPages, onClickFn) {
   if (totalPages <= 1) return "";
 
-  let html = '<div class="pagination-wrap">';
+  let html = '<nav class="mt-4"><ul class="pagination justify-content-center flex-wrap">';
 
-  // First page
-  html += `<a href="${baseUrl}&page=1" class="page-btn ${currentPage === 1 ? "active" : ""}">1</a>`;
+  // Prev
+  html += `<li class="page-item ${currentPage === 1 ? "disabled" : ""}">
+    <a class="page-link" href="#" onclick="${onClickFn}(${currentPage - 1});return false;">&laquo;</a>
+  </li>`;
 
-  if (currentPage > 4) {
-    html += `<span class="page-btn">...</span>`;
+  // Page numbers
+  const maxVisible = 5;
+  let start = Math.max(1, currentPage - Math.floor(maxVisible / 2));
+  let end = Math.min(totalPages, start + maxVisible - 1);
+  if (end - start < maxVisible - 1) {
+    start = Math.max(1, end - maxVisible + 1);
   }
 
-  const start = Math.max(2, currentPage - 1);
-  const end = Math.min(totalPages - 1, currentPage + 1);
+  if (start > 1) {
+    html += `<li class="page-item"><a class="page-link" href="#" onclick="${onClickFn}(1);return false;">1</a></li>`;
+    if (start > 2) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+  }
 
   for (let i = start; i <= end; i++) {
-    html += `<a href="${baseUrl}&page=${i}" class="page-btn ${i === currentPage ? "active" : ""}">${i}</a>`;
+    html += `<li class="page-item ${i === currentPage ? "active" : ""}">
+      <a class="page-link" href="#" onclick="${onClickFn}(${i});return false;">${i}</a>
+    </li>`;
   }
 
-  if (currentPage < totalPages - 3) {
-    html += `<span class="page-btn">...</span>`;
+  if (end < totalPages) {
+    if (end < totalPages - 1) html += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+    html += `<li class="page-item"><a class="page-link" href="#" onclick="${onClickFn}(${totalPages});return false;">${totalPages}</a></li>`;
   }
 
-  if (totalPages > 1) {
-    html += `<a href="${baseUrl}&page=${totalPages}" class="page-btn ${currentPage === totalPages ? "active" : ""}">${totalPages}</a>`;
-  }
+  // Next
+  html += `<li class="page-item ${currentPage === totalPages ? "disabled" : ""}">
+    <a class="page-link" href="#" onclick="${onClickFn}(${currentPage + 1});return false;">&raquo;</a>
+  </li>`;
 
-  html += "</div>";
+  html += "</ul></nav>";
   return html;
+}
+
+// ============ Navigation / Router ============
+let currentView = "home";
+let currentParams = {};
+
+function navigateTo(view, param, param2) {
+  closeSidebar();
+  currentView = view;
+  currentParams = { param, param2 };
+
+  // Update hash
+  if (view === "home") {
+    history.pushState(null, "", "/");
+  } else if (view === "watch") {
+    history.pushState(null, "", `?v=${param}`);
+  } else if (view === "category") {
+    history.pushState(null, "", `?category=${encodeURIComponent(param)}${param2 ? "&page=" + param2 : ""}`);
+  } else if (view === "categories") {
+    history.pushState(null, "", "?view=categories");
+  } else if (view === "search") {
+    history.pushState(null, "", `?q=${encodeURIComponent(param)}${param2 ? "&page=" + param2 : ""}`);
+  }
+
+  renderView();
+}
+
+function parseURL() {
+  const params = new URLSearchParams(window.location.search);
+  const slug = params.get("v");
+  const category = params.get("category");
+  const query = params.get("q");
+  const view = params.get("view");
+  const page = parseInt(params.get("page")) || 1;
+
+  if (slug) {
+    currentView = "watch";
+    currentParams = { param: slug };
+  } else if (category) {
+    currentView = "category";
+    currentParams = { param: category, param2: page };
+  } else if (query) {
+    currentView = "search";
+    currentParams = { param: query, param2: page };
+  } else if (view === "categories") {
+    currentView = "categories";
+    currentParams = {};
+  } else {
+    currentView = "home";
+    currentParams = {};
+  }
+}
+
+function renderView() {
+  const appContent = document.getElementById("appContent");
+  appContent.innerHTML = `<div class="text-center py-5"><div class="spinner-border text-purple" role="status"><span class="visually-hidden">Loading...</span></div></div>`;
+
+  updateActiveCategory();
+
+  switch (currentView) {
+    case "home":
+      initHomePage();
+      break;
+    case "watch":
+      initWatchPage(currentParams.param);
+      break;
+    case "category":
+      initCategoryPage(currentParams.param, currentParams.param2 || 1);
+      break;
+    case "search":
+      initSearchPage(currentParams.param, currentParams.param2 || 1);
+      break;
+    case "categories":
+      initAllCategories();
+      break;
+    default:
+      initHomePage();
+  }
+}
+
+function updateActiveCategory() {
+  document.querySelectorAll(".cat-pill").forEach((pill) => {
+    pill.classList.remove("active");
+  });
+
+  const pills = document.querySelectorAll(".cat-pill");
+  if (currentView === "home") {
+    pills[0]?.classList.add("active");
+  } else if (currentView === "categories") {
+    pills[pills.length - 1]?.classList.add("active");
+  }
 }
 
 // ============ Sidebar & Navigation ============
 function initNavigation() {
-  const sidebar = document.getElementById("sidebar");
   const menuToggle = document.getElementById("menuToggle");
   const sidebarClose = document.getElementById("sidebarClose");
   const screenOverlay = document.getElementById("screenOverlay");
 
   if (menuToggle) {
     menuToggle.addEventListener("click", () => {
-      sidebar.classList.add("show");
+      document.getElementById("sidebar").classList.add("show");
       screenOverlay.classList.add("active");
     });
-  }
-
-  function closeSidebar() {
-    sidebar.classList.remove("show");
-    screenOverlay.classList.remove("active");
   }
 
   if (sidebarClose) sidebarClose.addEventListener("click", closeSidebar);
@@ -114,241 +234,266 @@ function initNavigation() {
       e.preventDefault();
       const q = searchForm.querySelector("input").value.trim();
       if (q) {
-        window.location.href = `/categories.html?q=${encodeURIComponent(q)}`;
+        navigateTo("search", q);
       }
     });
   }
+
+  // Handle browser back/forward
+  window.addEventListener("popstate", () => {
+    parseURL();
+    renderView();
+  });
+}
+
+function closeSidebar() {
+  document.getElementById("sidebar")?.classList.remove("show");
+  document.getElementById("screenOverlay")?.classList.remove("active");
 }
 
 // ============ Home Page ============
 async function initHomePage() {
-  const sectionsEl = document.getElementById("videoSections");
-  const sliderWrapper = document.getElementById("sliderWrapper");
-  if (!sectionsEl) return;
+  const appContent = document.getElementById("appContent");
+  document.title = "StreamBox - Video Streaming";
 
-  // Fetch videos for different sections
   const [dataIndo, dataSMP, dataASD] = await Promise.all([
-    fetchAPI({ limit: 12, order: "daily_random" }),
+    fetchAPI({ limit: 16, order: "daily_random" }),
     fetchAPI({ category: "sapi SMP", limit: 12, order: "random" }),
     fetchAPI({ category: "sapi ASD", limit: 12, order: "random" }),
   ]);
 
-  // Populate slider
-  if (sliderWrapper && dataIndo && dataIndo.videos) {
-    sliderWrapper.innerHTML = dataIndo.videos
-      .slice(0, 8)
-      .map(
-        (v) => `
-      <div class="swiper-slide">
-        <a href="/watch.html?v=${encodeURIComponent(v.slug || "")}">
-          <img src="https://poster.imgvid.com/${v.code || ""}.jpg" alt="${v.title || ""}" loading="lazy">
-          <div class="slide-title">${v.title || ""}</div>
-        </a>
-      </div>
-    `
-      )
-      .join("");
+  let html = "";
 
-    // Initialize Swiper
-    new Swiper("#heroSwiper", {
-      slidesPerView: 1,
-      spaceBetween: 12,
-      loop: true,
-      autoplay: { delay: 3000, disableOnInteraction: false },
-      speed: 1500,
-      breakpoints: {
-        768: { slidesPerView: 2 },
-        1024: { slidesPerView: 3 },
-        1280: { slidesPerView: 4 },
-      },
-    });
+  // Hero Ad Banner
+  html += `<div class="ad-banner-hero"><i class="fa-solid fa-rectangle-ad me-2"></i> Premium Banner Advertisement</div>`;
+
+  // Featured / Pinned Video
+  if (dataIndo && dataIndo.videos && dataIndo.videos.length > 0) {
+    const pinned = dataIndo.videos[0];
+    const pinnedPoster = pinned.poster || `https://poster.imgvid.com/${pinned.code || ""}.jpg`;
+    html += `
+      <div class="featured-video" onclick="navigateTo('watch','${encodeURIComponent(pinned.slug || "")}')">
+        <div class="featured-thumb">
+          <img src="${pinnedPoster}" alt="${pinned.title || ""}" onerror="this.src='https://via.placeholder.com/1280x500/1a0a2e/8b5cf6?text=StreamBox'">
+          <div class="featured-play-btn">
+            <i class="fa-solid fa-play"></i>
+          </div>
+        </div>
+        <div class="featured-info">
+          <h2>${pinned.title || "Featured Video"}</h2>
+          <p><i class="fa-solid fa-eye me-1"></i> ${pinned.views || 0} views ${pinned.date ? `&bull; ${formatDate(pinned.date)}` : ""}</p>
+        </div>
+      </div>
+    `;
   }
 
-  // Build sections
-  let sectionsHTML = "";
-
-  if (dataIndo && dataIndo.videos && dataIndo.videos.length) {
-    sectionsHTML += buildSection("Sapi Indo", dataIndo.videos, "/categories.html?category=sapi+Indo");
+  // Video Sections
+  if (dataIndo && dataIndo.videos && dataIndo.videos.length > 1) {
+    html += buildSection("Sapi Indo", dataIndo.videos.slice(1), "sapi Indo");
   }
   if (dataSMP && dataSMP.videos && dataSMP.videos.length) {
-    sectionsHTML += buildSection("Sapi Bocil", dataSMP.videos, "/categories.html?category=sapi+SMP");
+    html += buildSection("Sapi Bocil", dataSMP.videos, "sapi SMP");
   }
   if (dataASD && dataASD.videos && dataASD.videos.length) {
-    sectionsHTML += buildSection("Sapi Asia", dataASD.videos, "/categories.html?category=sapi+ASD");
+    html += buildSection("Sapi Asia", dataASD.videos, "sapi ASD");
   }
 
-  if (!sectionsHTML) {
-    sectionsHTML = '<p style="text-align:center;color:#999;padding:40px;">No videos available at the moment.</p>';
+  if (!html) {
+    html = '<p class="text-center py-5" style="color:var(--text-muted);">No videos available at the moment.</p>';
   }
 
-  sectionsEl.innerHTML = sectionsHTML;
+  appContent.innerHTML = html;
 }
 
-function buildSection(title, videos, moreLink) {
+function buildSection(title, videos, categoryKey) {
   return `
     <div class="section-header">
       <h2 class="section-title">${title}</h2>
-      <a href="${moreLink}" class="more-btn">More Videos</a>
+      <a href="#" class="more-btn" onclick="navigateTo('category','${categoryKey}');return false;">More Videos</a>
     </div>
-    <div class="video-grid">
-      ${videos.map((v) => createVideoCard(v)).join("")}
+    <div class="row">
+      ${injectAdsInGrid(videos)}
     </div>
   `;
 }
 
 // ============ Watch Page ============
-async function initWatchPage() {
-  const watchContent = document.getElementById("watchContent");
-  if (!watchContent) return;
-
-  const params = new URLSearchParams(window.location.search);
-  const slug = params.get("v");
+async function initWatchPage(slug) {
+  const appContent = document.getElementById("appContent");
 
   if (!slug) {
-    watchContent.innerHTML = '<p style="text-align:center;color:#f66;padding:40px;">Error: No video specified.</p>';
+    appContent.innerHTML = '<div class="text-center py-5"><p class="text-danger">Error: No video specified.</p></div>';
     return;
   }
 
-  const data = await fetchAPI({ slug });
+  const decodedSlug = decodeURIComponent(slug);
+  const data = await fetchAPI({ slug: decodedSlug });
 
   if (!data || data.status !== "success" || !data.video) {
-    watchContent.innerHTML = '<p style="text-align:center;color:#f66;padding:40px;">Video not found.</p>';
+    appContent.innerHTML = `
+      <div class="video-player-wrap">
+        <div class="video-error">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <p>Video not found or failed to load.</p>
+          <a href="#" class="btn btn-sm" style="background:var(--purple-primary);color:#fff;" onclick="navigateTo('home');return false;">Back to Home</a>
+        </div>
+      </div>
+    `;
     return;
   }
 
   const video = data.video;
-  document.title = `${video.title} - StreamBox`;
+  document.title = `${video.title || "Watch"} - StreamBox`;
 
-  // Determine content type for recommendations
-  const contentType = video.title && video.title.startsWith("sapi Indo") ? 1 : 2;
-
-  // Fetch recommendations
-  const [recLeft, recRight] = await Promise.all([
-    fetchAPI({ content: contentType, limit: 12, order: "random" }),
-    fetchAPI({ content: contentType, limit: 6, order: "random" }),
-  ]);
-
+  const embedUrl = video.embed || "";
   const isIndo = video.title && video.title.startsWith("sapi Indo");
 
-  // Build genre links
+  // Genre links
   let genreHTML = "";
   if (video.genre) {
     const genres = video.genre.split(",").map((g) => g.trim()).filter(Boolean);
-    genreHTML = genres
-      .map((g) => `<a href="/categories.html?q=${encodeURIComponent(g)}" class="genre-btn" style="font-size:0.75rem;padding:4px 10px;">${g}</a>`)
-      .join(" ");
+    genreHTML = genres.map((g) => `<a href="#" class="genre-tag" onclick="navigateTo('search','${encodeURIComponent(g)}');return false;">${g}</a>`).join(" ");
+  }
+
+  // Fetch recommendations
+  const contentType = isIndo ? 1 : 2;
+  const [recData] = await Promise.all([
+    fetchAPI({ content: contentType, limit: 12, order: "random" }),
+  ]);
+
+  let playerHTML = "";
+  if (embedUrl) {
+    playerHTML = `<iframe src="${embedUrl}" allowfullscreen allow="autoplay; encrypted-media" loading="lazy"></iframe>`;
+  } else {
+    playerHTML = `
+      <div class="video-error">
+        <i class="fa-solid fa-film"></i>
+        <p>Video source unavailable</p>
+      </div>
+    `;
   }
 
   let html = `
-    <div class="watch-container">
-      <div class="watch-main">
-        <div class="video-player">
-          <iframe src="${video.embed || ""}" allowfullscreen></iframe>
+    <div class="row">
+      <div class="col-lg-8">
+        <div class="video-player-wrap">
+          ${playerHTML}
         </div>
-        ${isIndo && video.download ? `<a href="${video.download}" target="_blank" class="download-btn"><i class="fa-solid fa-download"></i> Download Video</a>` : ""}
-        <h1 class="video-detail-title">${video.title || ""}</h1>
-        <div class="video-detail-stats">
-          <i class="uil uil-eye"></i> ${video.views || 0} views
-          <span style="margin-left:16px"><i class="uil uil-calendar-alt"></i> ${formatDate(video.date)}</span>
+        ${isIndo && video.download ? `<a href="${video.download}" target="_blank" class="download-btn"><i class="fa-solid fa-download me-2"></i>Download Video</a>` : ""}
+        <h1 class="fs-5 fw-bold text-white mb-2">${video.title || ""}</h1>
+        <div class="mb-3" style="font-size:0.85rem;color:var(--text-muted);">
+          <i class="fa-solid fa-eye me-1"></i> ${video.views || 0} views
+          <span class="ms-3"><i class="fa-regular fa-calendar me-1"></i> ${formatDate(video.date)}</span>
         </div>
         ${!isIndo ? `
-          <div class="video-description">
-            ${video.actor ? `<p>• Actor: ${video.actor}</p>` : ""}
-            <p>• Status: Release</p>
-            ${genreHTML ? `<p>• Genre: ${genreHTML}</p>` : ""}
+          <div class="mb-3" style="font-size:0.85rem;color:var(--text-secondary);">
+            ${video.actor ? `<p class="mb-1">• Actor: ${video.actor}</p>` : ""}
+            <p class="mb-1">• Status: Release</p>
+            ${genreHTML ? `<p class="mb-1">• Genre: ${genreHTML}</p>` : ""}
           </div>
         ` : ""}
 
-        <div style="margin-top:30px;">
+        <div class="mt-4">
           <div class="section-header">
             <h2 class="section-title">Rekomendasi</h2>
           </div>
-          <div class="video-grid">
-            ${recLeft && recLeft.videos ? recLeft.videos.map((v) => createVideoCard(v)).join("") : ""}
+          <div class="row">
+            ${recData && recData.videos ? recData.videos.map((v) => createVideoCard(v)).join("") : ""}
           </div>
         </div>
       </div>
-
-      <aside class="watch-sidebar">
-        <div style="background:#222;padding:20px;text-align:center;color:#666;border-radius:8px;margin-bottom:16px;">
-          Ad Space
+      <div class="col-lg-4">
+        <div class="ad-banner mb-3"><i class="fa-solid fa-rectangle-ad me-2"></i> Ad Space</div>
+        <div class="row">
+          ${recData && recData.videos ? recData.videos.slice(0, 6).map((v) => `<div class="col-6 col-lg-12 mb-3"><a href="#" class="video-card" onclick="navigateTo('watch','${encodeURIComponent(v.slug || "")}');return false;"><div class="thumb-wrap"><img src="${v.poster || `https://poster.imgvid.com/${v.code || ""}.jpg`}" alt="${v.title || ""}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180/1a0a2e/8b5cf6?text=No+Image'"><div class="thumb-overlay"><i class="fa-solid fa-play"></i></div></div><div class="card-body"><div class="video-title">${v.title || ""}</div><div class="video-stats"><i class="fa-solid fa-eye"></i> ${v.views || 0}</div></div></a></div>`).join("") : ""}
         </div>
-        <div class="video-grid" style="grid-template-columns: 1fr;">
-          ${recRight && recRight.videos ? recRight.videos.map((v) => createVideoCard(v)).join("") : ""}
-        </div>
-      </aside>
+      </div>
     </div>
   `;
 
-  watchContent.innerHTML = html;
+  appContent.innerHTML = html;
+
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-// ============ Categories Page ============
-async function initCategoriesPage() {
-  const categoriesContent = document.getElementById("categoriesContent");
-  if (!categoriesContent) return;
+// ============ Category Page ============
+window._categoryPage = function (page) {
+  navigateTo("category", currentParams.param, page);
+};
 
-  const params = new URLSearchParams(window.location.search);
-  const category = params.get("category");
-  const query = params.get("q");
-  const page = parseInt(params.get("page")) || 1;
+async function initCategoryPage(category, page) {
+  const appContent = document.getElementById("appContent");
+  document.title = `${category} - StreamBox`;
 
-  // If no category or query, show genre list
-  if (!category && !query) {
-    document.title = "All Categories - StreamBox";
-    await showGenreList(categoriesContent);
-    return;
-  }
-
-  // Fetch videos
-  const apiParams = { page, limit: 12, order: "random" };
-  let pageTitle = "Categories";
-
-  if (category) {
-    apiParams.category = category;
-    pageTitle = `Category: ${category}`;
-  } else if (query) {
-    apiParams.q = query;
-    apiParams.order = "relevance";
-    apiParams.order_by = "relevance";
-    pageTitle = `Search: "${query}"`;
-  }
-
-  document.title = `${pageTitle} - StreamBox`;
-
-  const data = await fetchAPI(apiParams);
+  const data = await fetchAPI({ category, page, limit: 12, order: "random" });
 
   if (!data || !data.videos) {
-    categoriesContent.innerHTML = '<p style="text-align:center;color:#f66;padding:40px;">Failed to load videos.</p>';
+    appContent.innerHTML = '<p class="text-center py-5" style="color:var(--text-muted);">Failed to load videos.</p>';
     return;
   }
 
   const currentPage = data.current_page || 1;
   const totalPages = data.total_pages || 1;
 
-  // Highlight active category
-  highlightCategory(category);
-
-  let baseUrl = `/categories.html?${category ? "category=" + encodeURIComponent(category) : "q=" + encodeURIComponent(query || "")}`;
-
   let html = `
     <div class="section-header">
-      <h2 class="section-title">${pageTitle}</h2>
+      <h2 class="section-title">Category: ${category}</h2>
     </div>
   `;
 
   if (data.videos.length === 0) {
-    html += '<p style="text-align:center;color:#999;padding:40px;">No videos found.</p>';
+    html += '<p class="text-center py-5" style="color:var(--text-muted);">No videos found.</p>';
   } else {
-    html += `<div class="video-grid">${data.videos.map((v) => createVideoCard(v)).join("")}</div>`;
-    html += createPagination(currentPage, totalPages, baseUrl);
+    html += `<div class="row">${injectAdsInGrid(data.videos)}</div>`;
+    html += createPagination(currentPage, totalPages, "window._categoryPage");
   }
 
-  categoriesContent.innerHTML = html;
+  appContent.innerHTML = html;
+  window.scrollTo({ top: 0, behavior: "smooth" });
 }
 
-async function showGenreList(container) {
-  // Fetch all videos to extract genres
+// ============ Search Page ============
+window._searchPage = function (page) {
+  navigateTo("search", currentParams.param, page);
+};
+
+async function initSearchPage(query, page) {
+  const appContent = document.getElementById("appContent");
+  document.title = `Search: "${query}" - StreamBox`;
+
+  const data = await fetchAPI({ q: query, page, limit: 12, order: "relevance", order_by: "relevance" });
+
+  if (!data || !data.videos) {
+    appContent.innerHTML = '<p class="text-center py-5" style="color:var(--text-muted);">Failed to load results.</p>';
+    return;
+  }
+
+  const currentPage = data.current_page || 1;
+  const totalPages = data.total_pages || 1;
+
+  let html = `
+    <div class="section-header">
+      <h2 class="section-title">Search: "${query}"</h2>
+    </div>
+  `;
+
+  if (data.videos.length === 0) {
+    html += '<p class="text-center py-5" style="color:var(--text-muted);">No videos found.</p>';
+  } else {
+    html += `<div class="row">${injectAdsInGrid(data.videos)}</div>`;
+    html += createPagination(currentPage, totalPages, "window._searchPage");
+  }
+
+  appContent.innerHTML = html;
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+// ============ All Categories Page ============
+async function initAllCategories() {
+  const appContent = document.getElementById("appContent");
+  document.title = "All Categories - StreamBox";
+
   const data = await fetchAPI({ limit: 1000 });
 
   const genreSet = new Set();
@@ -369,40 +514,24 @@ async function showGenreList(container) {
     <div class="section-header">
       <h2 class="section-title">All Categories</h2>
     </div>
-    <div class="genre-list">
-      ${genres.map((g) => `<a href="/categories.html?category=${encodeURIComponent(g)}" class="genre-btn">${g}</a>`).join("")}
+    <div class="d-flex flex-wrap gap-2 mb-4">
+      ${genres.map((g) => `<a href="#" class="genre-list-btn" onclick="navigateTo('category','${encodeURIComponent(g)}');return false;">${g}</a>`).join("")}
     </div>
   `;
 
   if (genres.length === 0) {
-    html += '<p style="text-align:center;color:#999;">No categories available.</p>';
+    html += '<p class="text-center" style="color:var(--text-muted);">No categories available.</p>';
   }
 
-  container.innerHTML = html;
+  appContent.innerHTML = html;
 }
 
-function highlightCategory(category) {
-  if (!category) return;
-  document.querySelectorAll(".category-btn").forEach((btn) => {
-    btn.classList.remove("active");
-    const href = btn.getAttribute("href") || "";
-    if (href.includes(`category=${encodeURIComponent(category)}`) || href.includes(`category=${category.replace(/ /g, "+")}`)) {
-      btn.classList.add("active");
-    }
-  });
-}
+// ============ Expose to global for inline onclick ============
+window.navigateTo = navigateTo;
 
 // ============ Initialize ============
 document.addEventListener("DOMContentLoaded", () => {
   initNavigation();
-
-  const path = window.location.pathname;
-
-  if (path === "/" || path === "/index.html") {
-    initHomePage();
-  } else if (path === "/watch.html") {
-    initWatchPage();
-  } else if (path === "/categories.html") {
-    initCategoriesPage();
-  }
+  parseURL();
+  renderView();
 });
