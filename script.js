@@ -311,7 +311,7 @@ function buildSection(title, videos, categoryKey) {
       <h2 class="section-title">${title}</h2>
       <a href="#" class="more-btn" onclick="navigateTo('category','${categoryKey}');return false;">More Videos</a>
     </div>
-    <div class="row">
+    <div class="row g-2 g-md-3">
       ${injectAdsInGrid(videos)}
     </div>
   `;
@@ -374,38 +374,38 @@ async function initWatchPage(slug) {
   }
 
   let html = `
-    <div class="row">
-      <div class="col-lg-8">
+    <div class="row g-2 g-md-3">
+      <div class="col-12 col-lg-8">
         <div class="video-player-wrap">
           ${playerHTML}
         </div>
         ${isIndo && video.download ? `<a href="${video.download}" target="_blank" class="download-btn"><i class="fa-solid fa-download me-2"></i>Download Video</a>` : ""}
-        <h1 class="fs-5 fw-bold text-white mb-2">${video.title || ""}</h1>
-        <div class="mb-3" style="font-size:0.85rem;color:var(--text-muted);">
+        <h1 class="fs-6 fs-md-5 fw-bold text-white mb-2">${video.title || ""}</h1>
+        <div class="mb-3" style="font-size:0.8rem;color:var(--text-muted);">
           <i class="fa-solid fa-eye me-1"></i> ${video.views || 0} views
-          <span class="ms-3"><i class="fa-regular fa-calendar me-1"></i> ${formatDate(video.date)}</span>
+          <span class="ms-2 ms-md-3"><i class="fa-regular fa-calendar me-1"></i> ${formatDate(video.date)}</span>
         </div>
         ${!isIndo ? `
-          <div class="mb-3" style="font-size:0.85rem;color:var(--text-secondary);">
+          <div class="mb-3" style="font-size:0.8rem;color:var(--text-secondary);">
             ${video.actor ? `<p class="mb-1">• Actor: ${video.actor}</p>` : ""}
             <p class="mb-1">• Status: Release</p>
             ${genreHTML ? `<p class="mb-1">• Genre: ${genreHTML}</p>` : ""}
           </div>
         ` : ""}
 
-        <div class="mt-4">
+        <div class="mt-3 mt-md-4">
           <div class="section-header">
             <h2 class="section-title">Rekomendasi</h2>
           </div>
-          <div class="row">
+          <div class="row g-2 g-md-3">
             ${recData && recData.videos ? recData.videos.map((v) => createVideoCard(v)).join("") : ""}
           </div>
         </div>
       </div>
-      <div class="col-lg-4">
+      <div class="col-12 col-lg-4 mt-3 mt-lg-0">
         <div class="ad-banner mb-3"><i class="fa-solid fa-rectangle-ad me-2"></i> Ad Space</div>
-        <div class="row">
-          ${recData && recData.videos ? recData.videos.slice(0, 6).map((v) => `<div class="col-6 col-lg-12 mb-3"><a href="#" class="video-card" onclick="navigateTo('watch','${encodeURIComponent(v.slug || "")}');return false;"><div class="thumb-wrap"><img src="${v.poster || `https://poster.imgvid.com/${v.code || ""}.jpg`}" alt="${v.title || ""}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180/1a0a2e/8b5cf6?text=No+Image'"><div class="thumb-overlay"><i class="fa-solid fa-play"></i></div></div><div class="card-body"><div class="video-title">${v.title || ""}</div><div class="video-stats"><i class="fa-solid fa-eye"></i> ${v.views || 0}</div></div></a></div>`).join("") : ""}
+        <div class="row g-2">
+          ${recData && recData.videos ? recData.videos.slice(0, 6).map((v) => `<div class="col-4 col-sm-4 col-lg-12 mb-2"><a href="#" class="video-card" onclick="navigateTo('watch','${encodeURIComponent(v.slug || "")}');return false;"><div class="thumb-wrap"><img src="${v.poster || `https://poster.imgvid.com/${v.code || ""}.jpg`}" alt="${v.title || ""}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180/1a0a2e/8b5cf6?text=No+Image'"><div class="thumb-overlay"><i class="fa-solid fa-play"></i></div></div><div class="card-body"><div class="video-title">${v.title || ""}</div><div class="video-stats"><i class="fa-solid fa-eye"></i> ${v.views || 0}</div></div></a></div>`).join("") : ""}
         </div>
       </div>
     </div>
@@ -445,7 +445,7 @@ async function initCategoryPage(category, page) {
   if (data.videos.length === 0) {
     html += '<p class="text-center py-5" style="color:var(--text-muted);">No videos found.</p>';
   } else {
-    html += `<div class="row">${injectAdsInGrid(data.videos)}</div>`;
+    html += `<div class="row g-2 g-md-3">${injectAdsInGrid(data.videos)}</div>`;
     html += createPagination(currentPage, totalPages, "window._categoryPage");
   }
 
@@ -481,7 +481,7 @@ async function initSearchPage(query, page) {
   if (data.videos.length === 0) {
     html += '<p class="text-center py-5" style="color:var(--text-muted);">No videos found.</p>';
   } else {
-    html += `<div class="row">${injectAdsInGrid(data.videos)}</div>`;
+    html += `<div class="row g-2 g-md-3">${injectAdsInGrid(data.videos)}</div>`;
     html += createPagination(currentPage, totalPages, "window._searchPage");
   }
 
